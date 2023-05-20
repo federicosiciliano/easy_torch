@@ -1,0 +1,16 @@
+accelerator: "cpu"
+enable_checkpointing: True
+max_epochs: 2 #2000
+callbacks:
+    - EarlyStopping:
+        monitor: "val_loss"
+        mode: "min"
+        patience: 100
+
+    - ModelCheckpoint:
+        dirpath: ${exp.prj_fld}/out/models/
+        filename: best
+        save_top_k: 1
+        save_last: True
+        monitor: val_loss
+        mode: min

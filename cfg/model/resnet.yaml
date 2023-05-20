@@ -1,0 +1,21 @@
+name: resnet18 #34
+#+ backend: torch
+
+torchvision_params:
+  pretrained: True #False
+
+#output_size: 1
+
+optimizer:
+  name: Adam
+  params:
+    lr: 1.0e-1
+    weight_decay: 0.0005
+
+loss: CrossEntropyLoss
+
+#seed: ${exp.seed}
+
++loader_params: loader_params_cfg
+
++trainer_params: trainer_params_cfg

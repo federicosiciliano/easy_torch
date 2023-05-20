@@ -1,0 +1,12 @@
+Metadata-Version: 2.1
+Name: torch-utils
+Version: 0.0.1
+Summary: torch utils
+Home-page: https://github.com/siciliano-diag/torch_utils.git
+Author: siciliano-diag
+Author-email: siciliano@diag.uniroma1.it
+License: UNKNOWN
+Description: # torch_utils
+Keywords: pip,MachineLearning
+Platform: UNKNOWN
+Description-Content-Type: text/markdown
