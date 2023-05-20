@@ -10,6 +10,9 @@ class BaseNN(pl.LightningModule):
         self.metrics = metrics
         self.optimizer = optimizer
 
+        #set device attribute to model
+        self.model.device = self.device
+
         #useful?
         #for key,value in kwargs.items():
         #setattr(self,key,value)
