@@ -2,20 +2,23 @@ import torch
 import pytorch_lightning as pl
 
 class BaseNN(pl.LightningModule):
-    def __init__(self, model, loss, optimizer, metrics={}, **kwargs):
+    def __init__(self, main_module, loss, optimizer, metrics={}, **kwargs):
         super().__init__()
 
-        self.model = model
+        self.main_module = main_module
         self.loss = loss #loss_name: {log_params}
         self.metrics = metrics
         self.optimizer = optimizer
+
+        #set device attribute to main_module
+        self.main_module.device = self.device
 
         #useful?
         #for key,value in kwargs.items():
         #setattr(self,key,value)
 
     def forward(self, x):
-        return self.model(x)
+        return self.main_module(x)
 
     def configure_optimizers(self):
         optimizer = self.optimizer(self.parameters())
@@ -70,7 +73,7 @@ class Identity(torch.nn.Module):
 #                 layers.append(getattr(torch.nn, activation_function)())
 #             in_size = out_size
 #         layers.append(torch.nn.Linear(in_size, output_size))
-#         self.model = torch.nn.Sequential(*layers)
+#         self.main_module = torch.nn.Sequential(*layers)
 
 
 from . import torchvision_utils #put here otherwise circular import

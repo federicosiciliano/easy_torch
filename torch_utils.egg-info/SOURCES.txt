@@ -10,4 +10,5 @@ torch_utils/torchvision_utils.py
 torch_utils.egg-info/PKG-INFO
 torch_utils.egg-info/SOURCES.txt
 torch_utils.egg-info/dependency_links.txt
+torch_utils.egg-info/requires.txt
 torch_utils.egg-info/top_level.txt
