@@ -11,7 +11,7 @@ class BaseNN(pl.LightningModule):
         self.optimizer = optimizer
 
         #set device attribute to main_module
-        self.main_module.device = self.device
+        #self.main_module.device = self.device
 
         #useful?
         #for key,value in kwargs.items():
