@@ -6,37 +6,34 @@ import torchmetrics
 
 from .model import BaseNN
 
-def prepare_data_loaders(data, loader_params):
-    default_loader_params = {"num_workers": multiprocessing.cpu_count(), "pin_memory": True, "persistent_workers": True, "drop_last": {"all": False, "train": False, "val": False, "test": False}, "splits": ["", "train", "val", "test"]}
+def prepare_data_loaders(data, loader_params, split_keys = {"train": ["train_x", "train_y"], "val": ["val_x", "val_y"], "test": ["test_x", "test_y"]}):                         
+    default_loader_params = {"num_workers": multiprocessing.cpu_count(), "pin_memory": True, "persistent_workers": True, "drop_last": {"train": False, "val": False, "test": False}} #"all": False, 
     loader_params = dict(list(default_loader_params.items()) + list(loader_params.items()))
 
     loaders = {}
-    for split in loader_params["splits"]:
-        if isinstance(split,dict):
-            split_key = list(split.keys())[0]
-            split_x, split_y = split[split_key]
-            split = split_key
-        else:
-            split_x = "_".join([split,"x"])
-            split_y = "_".join([split,"y"])
+    for split_name, data_keys in split_keys.items():
+        split_loader_params = loader_params.copy()
+        # select specific parameters for this split
+        for key,value in split_loader_params.items():
+            if isinstance(value, dict):
+                if split_name in value.keys():
+                    split_loader_params[key] = value[split_name]
+                # elif "all" in value.keys():
+                #     split_loader_params[key] = value["all"]                        
+        
+        #get data
+        split_data = []
+        for data_key in data_keys:
+            split_data.append(torch.Tensor(data[data_key]))
 
-        if split_x in data:
-            split_loader_params = loader_params.copy()
-            del split_loader_params["splits"]
-            for key,value in split_loader_params.items():
-                if isinstance(value, dict):
-                    if split in value.keys():
-                        split_loader_params[key] = value[split]
-                    elif "all" in value.keys():
-                        split_loader_params[key] = value["all"]                        
-            
-            if isinstance(split_loader_params["batch_size"], float):
-                split_loader_params["batch_size"] = int(len(data[split_x])*split_loader_params["batch_size"])
+        # # if batch_size is float --> convert to int
+        # if isinstance(split_loader_params["batch_size"], float):
+        #     split_loader_params["batch_size"] = int(len(data[split_x])*split_loader_params["batch_size"])
 
-            td = torch.utils.data.TensorDataset(torch.Tensor(data[split_x]),torch.Tensor(data[split_y])) #Would need LongTensor if data[split_y] is not one-hot encoded
+        td = torch.utils.data.TensorDataset(*split_data)
+        # Would need LongTensor if data[split_y] is not one-hot encoded
 
-            #print(split_loader_params)
-            loaders[split] = torch.utils.data.DataLoader(td, **split_loader_params)
+        loaders[split_name] = torch.utils.data.DataLoader(td, **split_loader_params)
     return loaders
 
 def prepare_callbacks(trainer_params):
