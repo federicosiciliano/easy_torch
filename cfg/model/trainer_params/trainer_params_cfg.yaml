@@ -1,15 +1,15 @@
-accelerator: "cpu"
-enable_checkpointing: True
+/accelerator: "cpu"
+/enable_checkpointing: True
 max_epochs: 2 #2000
 callbacks:
     - EarlyStopping:
-        monitor: "val_loss"
-        mode: "min"
-        patience: 100
+        monitor: val_loss
+        mode: min
+        patience: 1
 
     - ModelCheckpoint:
-        dirpath: ${exp.prj_fld}/out/models/
-        filename: best
+        /dirpath: ${__exp__.project_folder}/out/models/
+        /filename: best
         save_top_k: 1
         save_last: True
         monitor: val_loss

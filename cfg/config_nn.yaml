@@ -48,11 +48,12 @@ __exp__:
     # project_folder: ../ #project folder, used to locate folders, optional, default = "../"
     # key_len: 16 #Length of experiment key, optional, default = 16
     # key_prefix: "" #Prefix for experiment key, optional, default = ""
-    # imports: #imports needed for config preparation (e.g. type casting)
-    #     # - data_utils
-    #     # - numpy as np #" as " will be recognized
-    #     # - name: pandas #" as " will be recognized
-    #     #   fromlist:
-    #     #     - DataFrame
-    #     #   as:
-    #     #     - DF
+    __imports__: #imports needed for config preparation (e.g. type casting)
+      - torchvision
+        # - data_utils
+        # - numpy as np #" as " will be recognized
+        # - name: pandas #" as " will be recognized
+        #   fromlist:
+        #     - DataFrame
+        #   as:
+        #     - DF

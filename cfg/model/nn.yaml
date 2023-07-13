@@ -1,4 +1,4 @@
-name: nn
+#name: nn
 #+ backend: torch
 
 num_neurons: [1, 2, 4, 8, 16, 32, 64, 128] #sweep
@@ -8,7 +8,9 @@ lr: [1.0e-2, 1.0e-3, 1.0e-4]
 
 seed: ${exp.seed}
 
-activation_function: ["Tanh", "LeakyReLU"]
+activation_function:
+  - Tanh
+  - LeakyReLU
 
 +loader_params: loader_params_cfg
 
