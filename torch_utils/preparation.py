@@ -36,6 +36,24 @@ def prepare_data_loaders(data, loader_params, split_keys = {"train": ["train_x",
         loaders[split_name] = torch.utils.data.DataLoader(td, **split_loader_params)
     return loaders
 
+
+def prepare_experiment_id(trainer_params, experiment_id):
+    trainer_params = trainer_params.copy()
+    if "callbacks" in trainer_params:
+        for callback_dict in trainer_params["callbacks"]:
+            if isinstance(callback_dict, dict):
+                for callback_name,callback_params in callback_dict.items():
+                    if callback_name=="ModelCheckpoint":
+                        callback_params["dirpath"] += experiment_id + "/"
+                    else:
+                        print(f"Warning: {callback_name} not recognized for adding experiment_id")
+                        pass
+
+    if "logger" in trainer_params:
+        trainer_params["logger"]["params"]["save_dir"] += experiment_id + "/"
+
+    return trainer_params
+
 def prepare_callbacks(trainer_params):
     pl.seed_everything(42, workers=True) #probably useless
 
@@ -56,13 +74,17 @@ def prepare_callbacks(trainer_params):
     #new_trainer_params["callbacks"] = callbacks
     #return new_trainer_params
 
-def prepare_logger():
-    print("TO BE IMPLEMENTED") #log type should not be saved as config, since it does not impact the results
+def prepare_logger(trainer_params):
+    pl.seed_everything(42, workers=True) #probably useless
+    logger = None
+    if "logger" in trainer_params:
+        logger = getattr(pl.loggers, trainer_params["logger"]["name"])(**trainer_params["logger"]["params"])
+    return logger
 
-def prepare_trainer(experiment_id=0, seed=42, **kwargs):
+def prepare_trainer(seed=42, **kwargs):
     pl.seed_everything(seed, workers=True) #useless?
 
-    default_trainer_params = {"enable_checkpointing": False, "logger": pl.loggers.CSVLogger("../out/log", name=str(experiment_id)), "accelerator": "auto", "devices": "auto"}
+    default_trainer_params = {"enable_checkpointing": False, "accelerator": "auto", "devices": "auto"}
     trainer_params = dict(list(default_trainer_params.items()) + list(kwargs.items()))
 
     trainer = pl.Trainer(**trainer_params)
