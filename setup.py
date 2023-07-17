@@ -16,7 +16,7 @@ setup(
     description='torch utils',
     long_description=long_description,
     long_description_content_type="text/markdown",
-    version='0.0.1',
+    version='0.0.2',
     install_requires=install_requires,
     url='https://github.com/siciliano-diag/torch_utils.git',
     author='siciliano-diag',
