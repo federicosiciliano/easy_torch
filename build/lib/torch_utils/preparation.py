@@ -103,7 +103,7 @@ def prepare_loss(loss):
     return getattr(torch.nn, loss_name)(**loss_params)
 
 def prepare_metrics(metrics_info):
-    metrics = []
+    metrics = {}
     for metric_name,metric_vals in metrics_info.items():
         metrics[metric_name] = getattr(torchmetrics,metric_name)(**metric_vals)
     return metrics
