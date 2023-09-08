@@ -98,17 +98,63 @@ def prepare_loss(loss):
         loss_name = loss
         loss_params = {}
     elif isinstance(loss, dict):
-        loss_name = list(loss.keys())[0] #accepts only one loss
+        loss_name = list(loss.keys())[0] #accepts only one loss #TODO
         loss_params = loss[loss_name]
+    #elif isinstance(loss, list): #should weight them, one parameter should be the weight
     else:
         raise NotImplementedError
+    
     return getattr(torch.nn, loss_name)(**loss_params)
 
 def prepare_metrics(metrics_info):
     metrics = {}
-    for metric_name,metric_vals in metrics_info.items():
+    for metric_name in metrics_info:
+        if isinstance(metrics_info, list): metric_vals = {}
+        elif isinstance(metrics_info, dict): metric_vals = metrics_info[metric_name]
+        else: raise NotImplementedError
         metrics[metric_name] = getattr(torchmetrics,metric_name)(**metric_vals)
     return metrics
+
+
+#Prototype for log different for metric / loss
+# def prepare_loss(loss_info):
+#     if isinstance(loss_info, str):
+#         iterate_on = {loss_info:{}}
+#     elif isinstance(loss_info, list):
+#         iterate_on = {metric_name:{} for metric_name in loss_info}
+#     elif isinstance(loss_info, dict):
+#         iterate_on = loss_info
+#     else:
+#         raise NotImplementedError
+
+#     loss = {}
+#     for loss_name, loss_params in iterate_on.items():
+#         #Separate log_params from loss_params
+#         loss_log_params = loss_params.pop("log_params", {})
+
+#         loss_weight = loss_params.pop("weight", 1.0)
+
+#         loss[loss_name] = {"loss":getattr(torch.nn,loss_name)(**loss_params), "log_params":loss_log_params, "weight":loss_weight}
+
+#     return loss
+
+# def prepare_metrics(metrics_info):
+#     if isinstance(metrics_info, str):
+#         iterate_on = {metrics_info:{}}
+#     elif isinstance(metrics_info, list):
+#         iterate_on = {metric_name:{} for metric_name in metrics_info}
+#     elif isinstance(metrics_info, dict):
+#         iterate_on = metrics_info
+#     else:
+#         raise NotImplementedError
+
+#     metrics = {}
+#     for metric_name, metric_params in iterate_on.items():
+#         #Separate log_params from metric_params
+#         metric_log_params = metric_params.pop("log_params", {})
+
+#         metrics[metric_name] = {"metric":getattr(torchmetrics,metric_name)(**metric_params), "log_params":metric_log_params}
+#     return metrics
 
 def prepare_optimizer(name, params):
     return lambda model_params: getattr(torch.optim,name)(model_params,**params)

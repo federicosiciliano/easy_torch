@@ -2,15 +2,17 @@ import torch
 import pytorch_lightning as pl
 from .model import BaseNN
 
-def create_model(main_module, loss, optimizer, metrics={}, seed=42):
+def create_model(main_module, loss, optimizer, metrics={}, log_params={}, seed=42):
     pl.seed_everything(seed, workers=True) #for weight initialization
-    model = BaseNN(main_module, loss, optimizer, metrics)
+    model = BaseNN(main_module, loss, optimizer, metrics, log_params)
     return model
 
 def train_model(trainer, model, loaders, train_key="train", val_key="val"):
     #pl.seed_everything(42, workers=True) #useless?
     if val_key is not None:
-        val_dataloaders = loaders[val_key]
+        if isinstance(val_key, str): val_dataloaders = loaders[val_key]
+        elif isinstance(val_key, list): val_dataloaders = {key: loaders[key] for key in val_key}
+        else: raise NotImplementedError
     else: val_dataloaders = None
     trainer.fit(model, loaders[train_key], val_dataloaders)
     
