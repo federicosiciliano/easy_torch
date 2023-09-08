@@ -2,9 +2,9 @@ import torch
 import pytorch_lightning as pl
 from .model import BaseNN
 
-def create_model(main_module, loss, optimizer, seed=42):
+def create_model(main_module, loss, optimizer, metrics={}, seed=42):
     pl.seed_everything(seed, workers=True) #for weight initialization
-    model = BaseNN(main_module, loss, optimizer)
+    model = BaseNN(main_module, loss, optimizer, metrics)
     return model
 
 def train_model(trainer, model, loaders, train_key="train", val_key="val"):

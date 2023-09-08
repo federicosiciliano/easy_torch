@@ -4,6 +4,8 @@ import torch
 import pytorch_lightning as pl
 import torchmetrics
 
+from copy import deepcopy
+
 from .model import BaseNN
 
 def prepare_data_loaders(data, loader_params, split_keys = {"train": ["train_x", "train_y"], "val": ["val_x", "val_y"], "test": ["test_x", "test_y"]}):                         
@@ -12,7 +14,7 @@ def prepare_data_loaders(data, loader_params, split_keys = {"train": ["train_x",
 
     loaders = {}
     for split_name, data_keys in split_keys.items():
-        split_loader_params = loader_params.copy()
+        split_loader_params = deepcopy(loader_params)
         # select specific parameters for this split
         for key,value in split_loader_params.items():
             if isinstance(value, dict):
@@ -37,8 +39,8 @@ def prepare_data_loaders(data, loader_params, split_keys = {"train": ["train_x",
     return loaders
 
 
-def prepare_experiment_id(trainer_params, experiment_id):
-    trainer_params = trainer_params.copy()
+def prepare_experiment_id(original_trainer_params, experiment_id):
+    trainer_params = deepcopy(original_trainer_params)
     if "callbacks" in trainer_params:
         for callback_dict in trainer_params["callbacks"]:
             if isinstance(callback_dict, dict):

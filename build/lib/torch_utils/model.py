@@ -7,8 +7,8 @@ class BaseNN(pl.LightningModule):
 
         self.main_module = main_module
         self.loss = loss #loss_name: {log_params}
-        self.metrics = metrics
         self.optimizer = optimizer
+        self.metrics = metrics
 
     def forward(self, x):
         return self.main_module(x)
@@ -30,7 +30,7 @@ class BaseNN(pl.LightningModule):
         #on_step=False, on_epoch=True, logger=True
 
         #compute other metrics
-        for metric_name,metric_func in self.metrics:
+        for metric_name,metric_func in self.metrics.items():
             metric_value = metric_func(y_hat,y)
             self.log(split+'_'+metric_name, metric_value) #miss log params
         
