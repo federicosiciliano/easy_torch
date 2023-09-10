@@ -74,12 +74,21 @@ def get_torchvision_model(*args, **kwargs): return torchvision_utils.get_torchvi
 
 def load_torchvision_model(*args, **kwargs): return torchvision_utils.load_torchvision_model(*args, **kwargs)
 
+
 class Identity(torch.nn.Module):
     def __init__(self):
         super().__init__()
         
     def forward(self, x):
         return x
+
+
+class LambdaLayer(torch.nn.Module):
+    def __init__(self, lambd):
+        super(LambdaLayer, self).__init__()
+        self.lambd = lambd
+    def forward(self, x):
+        return self.lambd(x)
 
 
 # class MLP(BaseNN):
