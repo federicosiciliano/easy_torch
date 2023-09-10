@@ -13,9 +13,10 @@ class SoftLabelsAccuracy(torchmetrics.Accuracy):
     def init(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         #self.__name__ = "custom_accuracy"
+        print("NEW ACCURACY")
 
     def forward(self, y_hat, y):
-        hard_y_hat = y_hat.argmax(dim=-1)
         hard_y = y.argmax(dim=-1)
-        acc = super().forward(hard_y_hat, hard_y)
+        print(hard_y)
+        acc = super().forward(y_hat, hard_y)
         return acc
