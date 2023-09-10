@@ -117,7 +117,7 @@ def prepare_metrics(metrics_info):
         #if torchmetrics has metric_name
         if hasattr(torchmetrics,metric_name):
             metrics_package = torchmetrics
-        elif hasattr(metrics,metric_name):
+        elif hasattr(custom_metrics,metric_name):
             metrics_package = custom_metrics
         else:
             raise NotImplementedError
