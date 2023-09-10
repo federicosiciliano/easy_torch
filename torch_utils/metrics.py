@@ -17,6 +17,5 @@ class SoftLabelsAccuracy(torchmetrics.Accuracy):
     def forward(self, y_hat, y):
         hard_y_hat = y_hat.argmax(dim=-1)
         hard_y = y.argmax(dim=-1)
-        acc = (hard_y_hat.int() == hard_y.int()).float().mean()
-
+        acc = super().forward(hard_y_hat, hard_y)
         return acc
