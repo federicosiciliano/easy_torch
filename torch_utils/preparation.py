@@ -113,6 +113,7 @@ def prepare_metrics(metrics_info):
         elif isinstance(metrics_info, dict): metric_vals = metrics_info[metric_name]
         else: raise NotImplementedError
         metrics[metric_name] = getattr(torchmetrics,metric_name)(**metric_vals)
+    metrics = torch.nn.ModuleDict(metrics)
     return metrics
 
 
