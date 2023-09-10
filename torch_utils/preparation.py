@@ -7,6 +7,7 @@ import torchmetrics
 from copy import deepcopy
 
 from .model import BaseNN
+import .metrics as custom_metrics
 
 def prepare_data_loaders(data, loader_params, split_keys = {"train": ["train_x", "train_y"], "val": ["val_x", "val_y"], "test": ["test_x", "test_y"]}):                         
     default_loader_params = {"num_workers": multiprocessing.cpu_count(), "pin_memory": True, "persistent_workers": True, "drop_last": {"train": False, "val": False, "test": False}} #"all": False, 
@@ -112,7 +113,15 @@ def prepare_metrics(metrics_info):
         if isinstance(metrics_info, list): metric_vals = {}
         elif isinstance(metrics_info, dict): metric_vals = metrics_info[metric_name]
         else: raise NotImplementedError
-        metrics[metric_name] = getattr(torchmetrics,metric_name)(**metric_vals)
+        
+        #if torchmetrics has metric_name
+        if hasattr(torchmetrics,metric_name):
+            metrics_package = torchmetrics
+        elif hasattr(metrics,metric_name):
+            metrics_package = custom_metrics
+        else:
+            raise NotImplementedError
+        metrics[metric_name] = getattr(metrics_package,metric_name)(**metric_vals)
     metrics = torch.nn.ModuleDict(metrics)
     return metrics
 
