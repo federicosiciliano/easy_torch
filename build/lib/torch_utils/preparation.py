@@ -7,7 +7,7 @@ import torchmetrics
 from copy import deepcopy
 
 from .model import BaseNN
-import .metrics as custom_metrics
+from . import metrics as custom_metrics
 
 def prepare_data_loaders(data, loader_params, split_keys = {"train": ["train_x", "train_y"], "val": ["val_x", "val_y"], "test": ["test_x", "test_y"]}):                         
     default_loader_params = {"num_workers": multiprocessing.cpu_count(), "pin_memory": True, "persistent_workers": True, "drop_last": {"train": False, "val": False, "test": False}} #"all": False, 
