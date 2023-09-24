@@ -1,3 +1,5 @@
+import pandas as pd
+import os
 import torch
 import pytorch_lightning as pl
 from .model import BaseNN
@@ -30,3 +32,11 @@ def shutdown_dataloaders_workers():
 def load_model(model_cfg, path):
     model = BaseNN.load_from_checkpoint(path, **model_cfg)
     return model
+
+def load_logs(name, exp_id, project_folder="../"):
+    file_path = os.path.join(project_folder, "out", "log", name, exp_id, "lightning_logs", "version_0", "metrics.csv")
+
+    #load CSV with pandas
+    logs = pd.read_csv(file_path)
+
+    return logs
