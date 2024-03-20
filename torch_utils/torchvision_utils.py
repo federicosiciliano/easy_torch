@@ -127,7 +127,7 @@ def change_conv_out_features(name, module, out_features=None):
         attr_name = "4"
     elif name in ["mc3_18"]:
         # Drop the last layer and modify convolutional layers
-        module._forward_impl = MethodType(resnet_forward_impl, module)
+        module.forward = MethodType(video_resnet_forward, module)
         del module.avgpool
         del module.fc
 
@@ -139,10 +139,20 @@ def change_conv_out_features(name, module, out_features=None):
     current_conv = getattr(module_section, attr_name)
 
     if name in ["mc3_18"]:
-        setattr(module_section, attr_name, type(current_conv)(in_planes=current_conv.in_channels,
-                                                            out_planes=[out_features, current_conv.out_channels][out_features is None],
-                                                            stride=current_conv.stride,
-                                                            padding=current_conv.padding))
+        pass
+        # setattr(module_section, attr_name, type(current_conv)(in_planes=current_conv.in_channels,
+        #                                                     out_planes=[out_features, current_conv.out_channels][out_features is None],
+        #                                                     stride=current_conv.stride[-1], #[-1] because internally the layer does stride=(1, stride, stride),
+        #                                                     padding=current_conv.padding[-1] #[-1] because internally the layer does padding=(0, padding, padding),
+        #                                                     ))
+        # batch_norm_name = str(int(attr_name)+1)
+        # batch_norm_layer = getattr(module_section, batch_norm_name)
+        # setattr(module_section, batch_norm_name, type(batch_norm_layer)(num_features=out_features,
+        #                                                                 eps=batch_norm_layer.eps,
+        #                                                                 momentum=batch_norm_layer.momentum,
+        #                                                                 affine=batch_norm_layer.affine,
+        #                                                                 track_running_stats=batch_norm_layer.track_running_stats))
+        # TODO: now, it gives error because residual has different size
     else:
         setattr(module_section, attr_name, type(current_conv)(in_channels=current_conv.in_channels,
                                                             out_channels=[out_features, current_conv.out_channels][out_features is None],
@@ -233,6 +243,30 @@ def resnet_forward_impl(self, x: torch.Tensor) -> torch.Tensor:
     # x = torch.flatten(x, 1)
     # x = self.fc(x)
     return x
+
+# Custom forward method for VideoResNet
+def video_resnet_forward(self, x: torch.Tensor) -> torch.Tensor:
+    """
+    Custom forward method for VideoResNet.
+
+    Parameters:
+    - self: The VideoResNet model.
+    - x: Input tensor.
+
+    Returns:
+    - x: Output tensor.
+    """
+    x = self.stem(x)
+    x = self.layer1(x)
+    x = self.layer2(x)
+    x = self.layer3(x)
+    x = self.layer4(x)
+    # x = self.avgpool(x)
+    # # Flatten the layer to fc
+    # x = x.flatten(1)
+    # x = self.fc(x)
+    return x
+
 
 
 # Function to load a TorchVision model from a checkpoint
@@ -366,4 +400,16 @@ def invert_layer(layer, current_input, inverted_layers=[]):
         # previous_input2 = previous_input.clone()
         # current_input2 = current_input.clone()
         # for children_layer_name, children_layer in layer.named_children():
-        #
+        #     if children_layer_name == "downsample" and children_layer is not None:
+        #         setattr(inverted_layer, children_layer_name, invert_model(layer.downsample, current_input, previous_input, keep_order=True))
+        #         previous_input2 = current_input2
+        #         current_input2 = children_layer(current_input) + current_input2
+        #     else:
+        #         print(children_layer_name, current_input2.shape, previous_input2.shape)
+        #         new_layer, current_input2, previous_input2 = invert_layer(children_layer, current_input2, previous_input2, inverted_layers)
+        #         setattr(inverted_layer, children_layer_name, new_layer)
+        #         current_input2 = children_layer(current_input2)
+    else:
+        raise NotImplementedError("Layer type", type(layer))
+    
+    return inverted_layer, current_input
