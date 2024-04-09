@@ -13,3 +13,5 @@ pytorch_lightning
 
 # Codecarbon
 codecarbon
+
+wandb
