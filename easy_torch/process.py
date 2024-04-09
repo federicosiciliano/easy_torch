@@ -60,10 +60,6 @@ def train_model(trainer, model, loaders, train_key="train", val_key="val", seed=
     
     if tracker is not None:
         tracker.stop()
-        # Log tracked emissions
-        # for key,value in tracker.final_emissions_data.values.items():
-        #     if not isinstance(value,str) and value is not None:
-        #         model.custom_log("train_"+key,value)
 
 # Function to validate a PyTorch Lightning model
 def validate_model(trainer, model, loaders, loaders_key="val", seed=42):
@@ -79,7 +75,7 @@ def validate_model(trainer, model, loaders, loaders_key="val", seed=42):
     Returns:
     - None
     """
-    pl.seed_everything(seed, workers=True) #TODO: commentare un po' in giro
+    pl.seed_everything(seed, workers=True)
 
     # Validate the model using the trainer
     trainer.validate(model, loaders[loaders_key])
@@ -98,7 +94,7 @@ def test_model(trainer, model, loaders, loaders_key="test", tracker=None, seed=4
     Returns:
     - None
     """
-    pl.seed_everything(seed, workers=True) #TODO: commentare un po' in giro
+    pl.seed_everything(seed, workers=True)
 
     if tracker is not None: tracker.start()
     
@@ -107,10 +103,6 @@ def test_model(trainer, model, loaders, loaders_key="test", tracker=None, seed=4
     
     if tracker is not None:
         tracker.stop()
-        # Log tracked emissions
-        # for key,value in tracker.final_emissions_data.values.items():
-        #     if not isinstance(value,str) and value is not None:
-        #         model.custom_log("test_"+key,value)
 
 # Function to shutdown data loader workers in a distributed setting
 def shutdown_dataloaders_workers():
@@ -125,7 +117,6 @@ def shutdown_dataloaders_workers():
     """
     # Check if PyTorch is distributed initialized
     if torch.distributed.is_initialized():
-        print("\n\nTORCH DISTR INIT\n\n")
         torch.distributed.barrier()
         torch.distributed.destroy_process_group()
 
