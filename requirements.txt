@@ -16,3 +16,6 @@ codecarbon
 
 # Deepspeed (Flops calculation)
 deepspeed
+
+#Wandb
+wandb

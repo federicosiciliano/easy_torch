@@ -79,7 +79,7 @@ def validate_model(trainer, model, loaders, loaders_key="val", seed=42):
     Returns:
     - None
     """
-    pl.seed_everything(seed, workers=True) #TODO: commentare un po' in giro
+    pl.seed_everything(seed, workers=True)
 
     # Validate the model using the trainer
     trainer.validate(model, loaders[loaders_key])
@@ -98,7 +98,7 @@ def test_model(trainer, model, loaders, loaders_key="test", tracker=None, profil
     Returns:
     - None
     """
-    pl.seed_everything(seed, workers=True) #TODO: commentare un po' in giro
+    pl.seed_everything(seed, workers=True)
 
     if tracker is not None: tracker.start()
     if profiler is not None: profiler.start_profile()
@@ -125,7 +125,6 @@ def shutdown_dataloaders_workers():
     """
     # Check if PyTorch is distributed initialized
     if torch.distributed.is_initialized():
-        print("\n\nTORCH DISTR INIT\n\n")
         torch.distributed.barrier()
         torch.distributed.destroy_process_group()
 
