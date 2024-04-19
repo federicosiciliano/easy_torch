@@ -9,7 +9,10 @@ from torch.utils.data import DataLoader, TensorDataset
 from .model import BaseNN
 from . import metrics as custom_metrics
 from . import losses as custom_losses  # Ensure your custom losses are imported
+from . import callbacks as custom_callbacks  # Ensure your custom losses are imported
 from codecarbon import EmissionsTracker
+from deepspeed.profiling.flops_profiler import FlopsProfiler
+
 
 # Function to prepare data loaders
 def prepare_data_loaders(data, split_keys={"train": ["train_x", "train_y"], "val": ["val_x", "val_y"], "test": ["test_x", "test_y"]}, dtypes = None, **loader_params):                         
@@ -94,7 +97,7 @@ def prepare_experiment_id(original_trainer_params, experiment_id):
     return trainer_params
 
 # Function to prepare callbacks
-def prepare_callbacks(trainer_params, seed=42):
+def prepare_callbacks(trainer_params, additional_module=None, seed=42):
     pl.seed_everything(seed) # Seed the random number generator
 
     # Initialize an empty list for callbacks
@@ -106,7 +109,7 @@ def prepare_callbacks(trainer_params, seed=42):
             if isinstance(callback_dict, dict):
                 for callback_name, callback_params in callback_dict.items():
                     # Create callback instances based on callback names and parameters
-                    callbacks.append(getattr(pl.callbacks, callback_name)(**callback_params))
+                    callbacks.append(get_single_callback(callback_name, callback_params, additional_module))
                     # The following lines are commented out because they seem to be related to a specific issue
                     # if callback_name == "ModelCheckpoint":
                     #     if os.path.isdir(callbacks[-1].dirpath):
@@ -178,6 +181,20 @@ def get_single_loss(loss_name, loss_params, additional_module=None):
     # Create the loss function using the name and parameters
     return getattr(loss_module, loss_name)(**loss_params)
 
+def get_single_callback(callback_name, callback_params, additional_module=None):
+    # Check if the callback_name exists in pl.callbacks or custom_callbackes
+    if hasattr(additional_module, callback_name):
+        callback_module = additional_module
+    elif hasattr(custom_callbacks, callback_name):
+        callback_module = custom_callbacks
+    elif hasattr(pl.callbacks, callback_name):
+        callback_module = pl.callbacks
+    else:
+        raise NotImplementedError(f"The callback {callback_name} is not found in pl.callbacks, custom_callbacks or additional module")
+
+    # Create the callback function using the name and parameters
+    return getattr(callback_module, callback_name)(**callback_params)
+
 
 def prepare_metrics(metrics_info, additional_module=None, seed=42):
     pl.seed_everything(seed) # Seed the random number generator
@@ -227,6 +244,12 @@ def prepare_emission_tracker(experiment_id, **tracker_kwargs):
     tracker_kwargs["output_dir"] = tracker_kwargs.get("output_dir", "../out/log/") + experiment_id + "/"
     tracker = EmissionsTracker(**tracker_kwargs)
     return tracker
+
+def prepare_flops_profiler(model, experiment_id, **profiler_kwargs):
+    output_dir = profiler_kwargs.pop("output_dir", "../out/log/")
+    profiler = FlopsProfiler(model, **profiler_kwargs)
+    profiler.output_dir = output_dir + experiment_id + "/"
+    return profiler
 
 """
 # Prototype for logging different configurations for metrics and losses

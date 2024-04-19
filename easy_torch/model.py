@@ -11,8 +11,8 @@ class BaseNN(pl.LightningModule):
     #TODO: DEFINITION OF INPUTS
     def __init__(self, main_module, loss, optimizer, metrics={}, log_params={},
                  step_routing = {"model_input_from_batch":[0],
-                                 "loss_input_from_batch": [1], "loss_input_from_model_output": [0],
-                                 "metrics_input_from_batch": [1], "metrics_input_from_model_output": [0]},
+                                 "loss_input_from_batch": [1], "loss_input_from_model_output": None,
+                                 "metrics_input_from_batch": [1], "metrics_input_from_model_output": None},
                  **kwargs):
         super().__init__()
 

@@ -27,7 +27,7 @@ def create_model(main_module, seed=42, **kwargs):
     return model
 
 # Function to train a PyTorch Lightning model
-def train_model(trainer, model, loaders, train_key="train", val_key="val", seed=42, tracker=None):
+def train_model(trainer, model, loaders, train_key="train", val_key="val", seed=42, tracker=None, profiler=None):
     """
     Train a PyTorch Lightning model.
 
@@ -55,15 +55,15 @@ def train_model(trainer, model, loaders, train_key="train", val_key="val", seed=
         val_dataloaders = None
     
     if tracker is not None: tracker.start()
+    if profiler is not None: profiler.start_profile()
     
     trainer.fit(model, loaders[train_key], val_dataloaders)
     
     if tracker is not None:
         tracker.stop()
-        # Log tracked emissions
-        # for key,value in tracker.final_emissions_data.values.items():
-        #     if not isinstance(value,str) and value is not None:
-        #         model.custom_log("train_"+key,value)
+    if profiler is not None:
+        profiler.print_model_profile(output_file = f"{profiler.output_dir}/train_flops.txt")
+        profiler.stop_profile()
 
 # Function to validate a PyTorch Lightning model
 def validate_model(trainer, model, loaders, loaders_key="val", seed=42):
@@ -85,7 +85,7 @@ def validate_model(trainer, model, loaders, loaders_key="val", seed=42):
     trainer.validate(model, loaders[loaders_key])
 
 # Function to test a PyTorch Lightning model
-def test_model(trainer, model, loaders, loaders_key="test", tracker=None, seed=42):
+def test_model(trainer, model, loaders, loaders_key="test", tracker=None, profiler=None, seed=42):
     """
     Test a PyTorch Lightning model.
 
@@ -101,16 +101,16 @@ def test_model(trainer, model, loaders, loaders_key="test", tracker=None, seed=4
     pl.seed_everything(seed, workers=True) #TODO: commentare un po' in giro
 
     if tracker is not None: tracker.start()
+    if profiler is not None: profiler.start_profile()
     
     # Test the model using the trainer
     trainer.test(model, loaders[loaders_key])
     
     if tracker is not None:
         tracker.stop()
-        # Log tracked emissions
-        # for key,value in tracker.final_emissions_data.values.items():
-        #     if not isinstance(value,str) and value is not None:
-        #         model.custom_log("test_"+key,value)
+    if profiler is not None:
+        profiler.print_model_profile(output_file = f"{profiler.output_dir}/test_flops.txt")
+        profiler.stop_profile()
 
 # Function to shutdown data loader workers in a distributed setting
 def shutdown_dataloaders_workers():
