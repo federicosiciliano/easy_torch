@@ -5,10 +5,13 @@ from setuptools import setup, find_packages
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
-with open('colab_requirements.txt') as f:
-    colab_required = f.read().splitlines()
+# Check if requirements.txt files exists and if so, read their contents
+colab_required = []
+if os.path.isfile("colab_requirements.txt"):
+    with open('colab_requirements.txt') as f:
+        colab_required = f.read().splitlines()
 
-# Check if a requirements.txt file exists and if so, read its contents
+install_requires = []
 if os.path.isfile("requirements.txt"):
     with open("requirements.txt") as f:
         install_requires = f.read().splitlines()
