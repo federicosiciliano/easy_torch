@@ -18,6 +18,10 @@ optimizer:
     lr: 1.0e-1
     weight_decay: 0.0005
 
+log_params:
+  on_epoch: True
+  on_step: False
+
 loss: CrossEntropyLoss
 
 #seed: ${exp.seed}

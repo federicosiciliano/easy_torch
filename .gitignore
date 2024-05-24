@@ -14,7 +14,8 @@ data/*
 doc/*
 
 # Output
-out/model/*
+out/*
+out/models/*
 *.pth
 
 ### DEFAULT GITIGNORE

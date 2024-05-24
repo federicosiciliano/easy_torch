@@ -200,27 +200,15 @@ def prepare_loss(loss_info, additional_module=None, seed=42):
 
 def get_single_loss(loss_name, loss_params, additional_module=None):
     # Check if the loss_name exists in torch.nn or additional_module
-    if hasattr(additional_module, loss_name):
-        loss_module = additional_module
-    elif hasattr(torch.nn, loss_name):
-        loss_module = torch.nn
-    else:
-        raise NotImplementedError(f"The loss function {loss_name} is not found in torch.nn or additional module")
+    loss_module = get_correct_package(loss_name, additional_module, custom_losses, torch.nn)
 
     # Create the loss function using the name and parameters
     return getattr(loss_module, loss_name)(**loss_params)
 
 def get_single_callback(callback_name, callback_params, additional_module=None):
     # Check if the callback_name exists in pl.callbacks or custom_callbackes
-    if hasattr(additional_module, callback_name):
-        callback_module = additional_module
-    elif hasattr(custom_callbacks, callback_name):
-        callback_module = custom_callbacks
-    elif hasattr(pl.callbacks, callback_name):
-        callback_module = pl.callbacks
-    else:
-        raise NotImplementedError(f"The callback {callback_name} is not found in pl.callbacks, custom_callbacks or additional module")
-
+    callback_module = get_correct_package(callback_name, additional_module, custom_callbacks, pl.callbacks)
+    
     # Create the callback function using the name and parameters
     return getattr(callback_module, callback_name)(**callback_params)
 
@@ -238,14 +226,8 @@ def prepare_metrics(metrics_info, additional_module=None, seed=42):
         else: 
             raise NotImplementedError  # Raise an error for unsupported input types
         
-        # Check if the metric_name exists in torchmetrics or additional_module
-        if hasattr(additional_module, metric_name):
-            metrics_package = additional_module
-        elif hasattr(torchmetrics, metric_name):
-            metrics_package = torchmetrics
-        else:
-            raise NotImplementedError  # Raise an error if the metric_name is not found in any package
-        
+        metrics_package = get_correct_package(metric_name, additional_module, custom_metrics, torchmetrics)
+
         # Create a metric object using getattr and store it in the metrics dictionary
         metrics[metric_name] = getattr(metrics_package, metric_name)(**metric_vals)
     
@@ -271,12 +253,6 @@ def prepare_emission_tracker(experiment_id, **tracker_kwargs):
     tracker_kwargs["output_dir"] = tracker_kwargs.get("output_dir", "../out/log/") + experiment_id + "/"
     tracker = EmissionsTracker(**tracker_kwargs)
     return tracker
-
-def prepare_flops_profiler(model, experiment_id, **profiler_kwargs):
-    output_dir = profiler_kwargs.pop("output_dir", "../out/log/")
-    profiler = FlopsProfiler(model, **profiler_kwargs)
-    profiler.output_dir = output_dir + experiment_id + "/"
-    return profiler
 
 """
 # Prototype for logging different configurations for metrics and losses
@@ -373,3 +349,14 @@ def prepare_metrics(metrics_info):
 #         cfg.pop('num_layers', None)
 
 #         cfg["neurons_per_layer"] = neurons_per_layer
+
+def get_correct_package(name, additional_module, custom_package, torch_package):
+    # Check if name exists in additional_module, custom or torch/torchmetrics
+    if hasattr(additional_module, name):
+        return additional_module
+    elif hasattr(custom_package, name):
+        return custom_package
+    elif hasattr(torch_package, name):
+        return torch_package
+    else:
+        raise NotImplementedError(f"The function/class {name} is not found in {additional_module} or {custom_package} or {torch_package}")

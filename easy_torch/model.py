@@ -13,7 +13,7 @@ class BaseNN(pl.LightningModule):
                  step_routing = {"model_input_from_batch":[0],
                                  "loss_input_from_batch": [1], "loss_input_from_model_output": None,
                                  "metrics_input_from_batch": [1], "metrics_input_from_model_output": None},
-                 **kwargs):
+                 **kwargs): #TODO? change step order in computation: first model_output then batch
         super().__init__()
 
         # Store the main neural network module
@@ -89,19 +89,19 @@ class BaseNN(pl.LightningModule):
     
     def get_input_args_kwargs(self, *args):
         input_args, input_kwargs = [],{}
-        for object,keys in args:
+        for obj,keys in args:
             if isinstance(keys, int) or isinstance(keys, str):
                 keys = [keys]
             if isinstance(keys, list):
-                input_args += [object[i] for i in keys]
+                input_args += [obj[i] for i in keys]
             elif isinstance(keys, dict):
                 for k,i in keys.items():
                     if i is None:
-                        input_kwargs[k] = object
+                        input_kwargs[k] = obj
                     else:
-                        input_kwargs[k] = object[i]
+                        input_kwargs[k] = obj[i]
             elif keys is None:
-                input_args.append(object)
+                input_args.append(obj)
             else:
                 raise NotImplementedError("keys type not recognized")
         return input_args, input_kwargs
@@ -194,6 +194,8 @@ class BaseNN(pl.LightningModule):
 
 # Define functions for getting and loading torchvision models
 def get_torchvision_model(*args, **kwargs): return torchvision_utils.get_torchvision_model(*args, **kwargs)
+#TODO: add set seed
+
 
 def get_torchvision_model_as_decoder(example_datum, *args, **kwargs):
     forward_model = torchvision_utils.get_torchvision_model(*args, **kwargs)
