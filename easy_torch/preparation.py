@@ -254,6 +254,12 @@ def prepare_emission_tracker(experiment_id, **tracker_kwargs):
     tracker = EmissionsTracker(**tracker_kwargs)
     return tracker
 
+def prepare_flops_profiler(model, experiment_id, **profiler_kwargs):
+    output_dir = profiler_kwargs.pop("output_dir", "../out/log/")
+    profiler = FlopsProfiler(model, **profiler_kwargs)
+    profiler.output_dir = output_dir + experiment_id + "/"
+    return profiler
+
 """
 # Prototype for logging different configurations for metrics and losses
 def prepare_loss(loss_info):
