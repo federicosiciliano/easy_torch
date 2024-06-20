@@ -5,7 +5,6 @@ import pytorch_lightning as pl
 import torchmetrics
 from copy import deepcopy
 from torch.utils.data import DataLoader, TensorDataset
-from codecarbon import EmissionsTracker
 import wandb
 import os
 
@@ -14,8 +13,6 @@ from .model import BaseNN
 from . import metrics as custom_metrics
 from . import losses as custom_losses  # Ensure your custom losses are imported
 from . import callbacks as custom_callbacks  # Ensure your custom losses are imported
-from codecarbon import EmissionsTracker
-from deepspeed.profiling.flops_profiler import FlopsProfiler
 
 
 # Function to prepare data loaders
@@ -249,12 +246,14 @@ def prepare_model(model_cfg):
     return model
 
 def prepare_emission_tracker(experiment_id, **tracker_kwargs):
+    from codecarbon import EmissionsTracker
     # Update the "output_dir" in tracker parameters to include the experiment_id
     tracker_kwargs["output_dir"] = tracker_kwargs.get("output_dir", "../out/log/") + experiment_id + "/"
     tracker = EmissionsTracker(**tracker_kwargs)
     return tracker
 
 def prepare_flops_profiler(model, experiment_id, **profiler_kwargs):
+    from deepspeed.profiling.flops_profiler import FlopsProfiler
     output_dir = profiler_kwargs.pop("output_dir", "../out/log/")
     profiler = FlopsProfiler(model, **profiler_kwargs)
     profiler.output_dir = output_dir + experiment_id + "/"
