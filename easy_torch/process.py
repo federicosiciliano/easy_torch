@@ -21,7 +21,7 @@ def create_model(main_module, seed=42, **kwargs):
     Returns:
     - model: The PyTorch Lightning model.
     """
-    pl.seed_everything(seed) # Set a random seed for weight initialization
+    pl.seed_everything(seed) # Set a random seed for weight initialization --> not needed?
     # Create the model using the BaseNN class
     model = BaseNN(main_module, **kwargs)
     return model
@@ -85,7 +85,7 @@ def validate_model(trainer, model, loaders, loaders_key="val", seed=42):
     trainer.validate(model, loaders[loaders_key])
 
 # Function to test a PyTorch Lightning model
-def test_model(trainer, model, loaders, loaders_key="test", tracker=None, profiler=None, seed=42):
+def test_model(trainer, model, loaders, test_key="test", tracker=None, profiler=None, seed=42):
     """
     Test a PyTorch Lightning model.
 
@@ -93,7 +93,7 @@ def test_model(trainer, model, loaders, loaders_key="test", tracker=None, profil
     - trainer: The PyTorch Lightning trainer.
     - model: The PyTorch Lightning model to be tested.
     - loaders: Dictionary of data loaders.
-    - loaders_key: Key for the test data loader.
+    - test_key: Key for the test data loader.
 
     Returns:
     - None
@@ -103,8 +103,15 @@ def test_model(trainer, model, loaders, loaders_key="test", tracker=None, profil
     if tracker is not None: tracker.start()
     if profiler is not None: profiler.start_profile()
     
+    if isinstance(test_key, str):
+        test_dataloaders = loaders[test_key]
+    elif isinstance(test_key, list):
+        test_dataloaders = {key: loaders[key] for key in test_key}
+    else:
+        raise NotImplementedError
+
     # Test the model using the trainer
-    trainer.test(model, loaders[loaders_key])
+    trainer.test(model, test_dataloaders)
     
     if tracker is not None:
         tracker.stop()
