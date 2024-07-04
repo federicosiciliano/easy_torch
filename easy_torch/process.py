@@ -119,6 +119,12 @@ def test_model(trainer, model, loaders, test_key="test", tracker=None, profiler=
         profiler.print_model_profile(output_file = f"{profiler.output_dir}/test_flops.txt")
         profiler.stop_profile()
 
+    # # (1) load the best checkpoint automatically (lightning tracks this for you during .fit())
+    # trainer.test(ckpt_path="best")
+
+    # # (2) load the last available checkpoint (only works if `ModelCheckpoint(save_last=True)`)
+    # trainer.test(ckpt_path="last")
+
 # Function to shutdown data loader workers in a distributed setting
 def shutdown_dataloaders_workers():
     """
