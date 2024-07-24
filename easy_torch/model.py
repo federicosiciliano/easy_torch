@@ -160,7 +160,9 @@ class BaseNN(pl.LightningModule):
 
         value = func(*input_args,**input_kwargs)
 
-        if isinstance(value, dict):
+        if value is None:
+            return None
+        elif isinstance(value, dict):
             for key in value:
                 log_key = split_name+'_'+name+'_'+key
                 to_log = value[key]
