@@ -103,6 +103,8 @@ class GCELoss(torch.nn.Module):
         # Return the mean loss
         return torch.mean(loss)
 
+#NCODLoss has manual optmization as written here https://lightning.ai/docs/pytorch/stable/model/manual_optimization.html# according
+#to the paper https://github.com/RSTLess-research/NCOD-Learning-with-noisy-labels/tree/main
 class NCODLoss(torch.nn.Module):
     def __init__(self, sample_labels=None, num_examp=50000, num_classes=100, ratio_consistency=0, ratio_balance=0, total_epochs=4000, encoder_features=512):
         super().__init__()
