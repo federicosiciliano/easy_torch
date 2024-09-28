@@ -1,8 +1,6 @@
 # Import necessary libraries
 import torch
 import pytorch_lightning as pl
-import os
-import csv
 import torchmetrics
 
 class BaseNN(pl.LightningModule):
@@ -134,10 +132,7 @@ class BaseNN(pl.LightningModule):
         value = func(*input_args,**input_kwargs)
 
         log_name = split_name+'_'+name
-        if isinstance(func, torchmetrics.metric.Metric):
-            self.log(log_name, func)
-        else:
-            self.log(log_name, value)
+        self.log(log_name, value)
 
         return value
     
@@ -161,6 +156,21 @@ class BaseNN(pl.LightningModule):
     
     # TODO: Predict step
     # def predict_step(self, batch, batch_idx, dataloader_idx): return self.step(batch, batch_idx, dataloader_idx, "predict")
+
+    def on_train_epoch_start(self):
+        for metric_func in self.metrics.values():
+            if isinstance(metric_func, torchmetrics.metric.Metric):
+                metric_func.reset()
+
+    def on_validation_epoch_start(self):
+        for metric_func in self.metrics.values():
+            if isinstance(metric_func, torchmetrics.metric.Metric):
+                metric_func.reset()
+    
+    def on_test_epoch_start(self):
+        for metric_func in self.metrics.values():
+            if isinstance(metric_func, torchmetrics.metric.Metric):
+                metric_func.reset()
 
 # Define functions for getting and loading torchvision models
 def get_torchvision_model(*args, **kwargs): return torchvision_utils.get_torchvision_model(*args, **kwargs)
