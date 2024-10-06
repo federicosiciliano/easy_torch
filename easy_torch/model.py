@@ -75,7 +75,7 @@ class BaseNN(pl.LightningModule):
         if len(self.metrics)>0:
             lightning_module_return["metric_values"] = self.compute_metrics(batch, self.step_routing["metrics_input_from_batch"],
                                                 model_output, self.step_routing["metrics_input_from_model_output"],
-                                                split_name)
+                                                split_name, dataloader_idx)
 
         #TODO: is this return correct?
         return lightning_module_return
@@ -116,9 +116,9 @@ class BaseNN(pl.LightningModule):
             loss = self._compute("loss", self.loss, batch, loss_input_from_batch, model_output, loss_input_from_model_output, split_name)
         return loss
     
-    def compute_metrics(self, batch, metrics_input_from_batch, model_output, metrics_input_from_model_output, split_name):
+    def compute_metrics(self, batch, metrics_input_from_batch, model_output, metrics_input_from_model_output, split_name, dataloader_idx):
         metric_values = {}
-        for metric_name, metric_func in self.metrics.items():
+        for metric_name, metric_func in self.metrics[split_name][dataloader_idx].items():
             metric_values[metric_name] = self._compute(metric_name, metric_func, batch, metrics_input_from_batch, model_output, metrics_input_from_model_output, split_name)
         return metric_values
     
@@ -142,7 +142,6 @@ class BaseNN(pl.LightningModule):
         else:
             return obj
 
-
     # Training step
     def training_step(self, batch, batch_idx, dataloader_idx=0): return self.step(batch, batch_idx, dataloader_idx, "train")
 
@@ -157,17 +156,16 @@ class BaseNN(pl.LightningModule):
     # TODO: Predict step
     # def predict_step(self, batch, batch_idx, dataloader_idx): return self.step(batch, batch_idx, dataloader_idx, "predict")
 
-    def on_train_epoch_start(self):
-        for metric_func in self.metrics.values():
-            if isinstance(metric_func, torchmetrics.metric.Metric):
-                metric_func.reset()
-
-    def on_validation_epoch_start(self):
-        for metric_func in self.metrics.values():
-            if isinstance(metric_func, torchmetrics.metric.Metric):
-                metric_func.reset()
+    def on_train_epoch_end(self) -> None:
+        self.on_epoch_end("train")
     
-    def on_test_epoch_start(self):
+    def on_validation_epoch_end(self) -> None:
+        self.on_epoch_end("val")
+
+    def on_test_epoch_end(self) -> None:
+        self.on_epoch_end("test")
+
+    def on_epoch_end(self, split_name): #not a lightning method
         for metric_func in self.metrics.values():
             if isinstance(metric_func, torchmetrics.metric.Metric):
                 metric_func.reset()

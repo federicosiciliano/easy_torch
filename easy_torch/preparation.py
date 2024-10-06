@@ -5,7 +5,7 @@ import pytorch_lightning as pl
 import torchmetrics
 from copy import deepcopy
 from torch.utils.data import DataLoader, TensorDataset
-import wandb
+#import wandb
 import os
 
 # Import modules and functions from local files
@@ -13,6 +13,7 @@ from .model import BaseNN
 from . import metrics as custom_metrics
 from . import losses as custom_losses  # Ensure your custom losses are imported
 from . import callbacks as custom_callbacks  # Ensure your custom losses are imported
+from . import utils
 
 
 # Function to prepare data loaders
@@ -126,24 +127,24 @@ def remove_keys_from_dict(input_dict, keys_to_remove):
             remove_keys_from_dict(value, keys_to_remove)
     return input_dict
 
-def log_wandb(trainer_params):
-    items_to_delete = ['__nosave__', 'emission_tracker', 'metrics',
-                       'data_folder', 'log_params', 'step_routing']
-    cfg = exp_utils.cfg.load_configuration()
-    exp_found, experiment_id = exp_utils.exp.get_set_experiment_id(cfg)
-    if not exp_found:
-        wandb.login(key=trainer_params["logger"]["key"])
-        if trainer_params["logger"]["entity"] is not None:
-            wandb.init(entity=trainer_params["logger"]["entity"],
-                    project=trainer_params["logger"]["project"],
-                    name = cfg['__exp__.name'] + "_" + experiment_id,
-                    id = experiment_id,
-                    config = remove_keys_from_dict(cfg, items_to_delete))
-        else:
-            wandb.init(project=trainer_params["logger"]["project"],
-                    name = cfg['__exp__.name'] + "_" + experiment_id,
-                    id = experiment_id,
-                    config = remove_keys_from_dict(cfg, items_to_delete))
+# def log_wandb(trainer_params):
+#     items_to_delete = ['__nosave__', 'emission_tracker', 'metrics',
+#                        'data_folder', 'log_params', 'step_routing']
+#     cfg = exp_utils.cfg.load_configuration()
+#     exp_found, experiment_id = exp_utils.exp.get_set_experiment_id(cfg)
+#     if not exp_found:
+#         wandb.login(key=trainer_params["logger"]["key"])
+#         if trainer_params["logger"]["entity"] is not None:
+#             wandb.init(entity=trainer_params["logger"]["entity"],
+#                     project=trainer_params["logger"]["project"],
+#                     name = cfg['__exp__.name'] + "_" + experiment_id,
+#                     id = experiment_id,
+#                     config = remove_keys_from_dict(cfg, items_to_delete))
+#         else:
+#             wandb.init(project=trainer_params["logger"]["project"],
+#                     name = cfg['__exp__.name'] + "_" + experiment_id,
+#                     id = experiment_id,
+#                     config = remove_keys_from_dict(cfg, items_to_delete))
     
 
 # Function to prepare a logger based on trainer parameters
@@ -210,26 +211,41 @@ def get_single_callback(callback_name, callback_params, additional_module=None):
     return getattr(callback_module, callback_name)(**callback_params)
 
 
-def prepare_metrics(metrics_info, additional_module=None, seed=42):
-    pl.seed_everything(seed) # Seed the random number generator
+def prepare_metrics(metrics_info, additional_module=None, split_keys={"train":1,"val":2,"test":1}, seed=42):
     # Initialize an empty dictionary to store metrics
     metrics = {}
+    if isinstance(metrics_info, dict) and all([key in metrics_info for key in split_keys.keys()]):
+        metrics_info_already_split = True
+    else:
+        metrics_info_already_split = False
     
-    for metric_name in metrics_info:
-        if isinstance(metrics_info, list): 
-            metric_vals = {}  # Initialize an empty dictionary for metric parameters
-        elif isinstance(metrics_info, dict): 
-            metric_vals = metrics_info[metric_name]  # Get metric parameters from the provided dictionary
-        else: 
-            raise NotImplementedError  # Raise an error for unsupported input types
-        
-        metrics_package = get_correct_package(metric_name, additional_module, custom_metrics, torchmetrics)
+    for split_name, num_dataloaders in split_keys.items():
+        metrics[split_name] = []
+        for dataloader_idx in range(num_dataloaders):
+            metrics[split_name].append({})
+            if metrics_info_already_split:
+                metrics_info_to_use = metrics_info[split_name][dataloader_idx]
+            else:
+                metrics_info_to_use = metrics_info
+    
+            for metric_name in metrics_info_to_use:
+                if isinstance(metrics_info_to_use, list): 
+                    metric_vals = {}  # Initialize an empty dictionary for metric parameters
+                elif isinstance(metrics_info_to_use, dict): 
+                    metric_vals = metrics_info_to_use[metric_name]  # Get metric parameters from the provided dictionary
+                else: 
+                    raise NotImplementedError  # Raise an error for unsupported input types
+                
+                metrics_package = get_correct_package(metric_name, additional_module, custom_metrics, torchmetrics)
 
-        # Create a metric object using getattr and store it in the metrics dictionary
-        metrics[metric_name] = getattr(metrics_package, metric_name)(**metric_vals)
+                pl.seed_everything(seed) # Seed the random number generator
+                # Create a metric object using getattr and store it in the metrics dictionary
+                metrics[split_name][-1][metric_name] = getattr(metrics_package, metric_name)(**metric_vals)
+            metrics[split_name][-1] = torch.nn.ModuleDict(metrics[split_name][-1])
+        metrics[split_name] = torch.nn.ModuleList(metrics[split_name])
     
     # Convert the metrics dictionary to a ModuleDict for easy handling
-    metrics = torch.nn.ModuleDict(metrics)
+    metrics = utils.RobustModuleDict(metrics)
     return metrics
 
 def prepare_optimizer(name, params={}, seed=42):
