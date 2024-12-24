@@ -8,12 +8,16 @@ from torch.utils.data import DataLoader, TensorDataset
 #import wandb
 import os
 
+from ray.train.lightning import prepare_trainer as prepare_ray_trainer
+import ray.train.lightning as ray_lightning
+
 # Import modules and functions from local files
 from .model import BaseNN
 from . import metrics as custom_metrics
 from . import losses as custom_losses  # Ensure your custom losses are imported
 from . import callbacks as custom_callbacks  # Ensure your custom losses are imported
 from . import utils
+from . import process
 
 
 # Function to prepare data loaders
@@ -148,14 +152,14 @@ def remove_keys_from_dict(input_dict, keys_to_remove):
     
 
 # Function to prepare a logger based on trainer parameters
-def prepare_logger(trainer_params, seed=42):
+def prepare_logger(trainer_params, additional_module=None, seed=42):
     pl.seed_everything(seed) # Seed the random number generator
     logger = None
     if "logger" in trainer_params:
         # Get the logger class based on its name and initialize it with parameters
         if not os.path.exists(trainer_params["logger"]["params"]["save_dir"]):
             os.makedirs(trainer_params["logger"]["params"]["save_dir"])
-        logger = getattr(pl.loggers, trainer_params["logger"]["name"])(**trainer_params["logger"]["params"])
+        logger = get_function(trainer_params["logger"]["name"], trainer_params["logger"]["params"], additional_module, pl.loggers)
         #if isinstance(logger, pl.loggers.wandb.WandbLogger):
         #This is the case when the logger is wandb so we check for the entity and the the key
             #log_wandb(trainer_params)
@@ -163,8 +167,49 @@ def prepare_logger(trainer_params, seed=42):
 
     return logger
 
+# Function to prepare strategy
+def prepare_strategy(trainer_params, additional_module=None):
+    # Have to check if strategy is in pytorch_lightning.strategies or additional_module, otherwise leave it as string (the trainer will handle it)
+
+    # Check if "strategy" is in trainer_params
+    strategy = "auto"
+    if "strategy" in trainer_params:
+        strategy_info = trainer_params["strategy"]
+        if isinstance(strategy_info, str):
+            strategy_name = strategy_info
+            strategy_params = {}
+        elif isinstance(strategy_info, dict):
+            strategy_name = strategy_info["name"]
+            strategy_params = strategy_info.get("params", {})
+            
+        function_module = get_correct_package(strategy_name, additional_module, pl.strategies, ray_lightning)
+
+        if function_module is not None:
+            strategy = getattr(function_module, strategy_name)(**strategy_params)
+        else:
+            strategy = strategy_name
+    return strategy
+
+def prepare_plugins(trainer_params, additional_module=None):
+    # Check if "plugins" is in trainer_params
+    plugins = [] # Initialize an empty list for plugins
+    if "plugins" in trainer_params:
+        for plugin_info in trainer_params["plugins"]:
+            if isinstance(plugin_info, str):
+                plugin_name = plugin_info
+                plugin_params = {}
+            elif isinstance(plugin_info, dict):
+                plugin_name = plugin_info["name"]
+                plugin_params = plugin_info.get("params", {})
+            
+            plugin = get_function(plugin_name, plugin_params, additional_module, pl.plugins, ray_lightning)
+
+            plugins.append(plugin)
+
+    return plugins
+
 # Function to prepare a PyTorch Lightning Trainer instance
-def prepare_trainer(seed=42, **trainer_kwargs):
+def prepare_trainer(seed=42, raytune=False, **trainer_kwargs):
     pl.seed_everything(seed) # Seed the random number generator
 
     # Default trainer parameters
@@ -175,6 +220,9 @@ def prepare_trainer(seed=42, **trainer_kwargs):
 
     # Create a Trainer instance with the specified parameters
     trainer = pl.Trainer(**trainer_params)
+
+    if raytune:
+        trainer = prepare_ray_trainer(trainer)
 
     return trainer
 
@@ -197,21 +245,21 @@ def prepare_loss(loss_info, additional_module=None, seed=42):
     return loss
 
 def get_single_loss(loss_name, loss_params, additional_module=None):
-    # Check if the loss_name exists in torch.nn or additional_module
-    loss_module = get_correct_package(loss_name, additional_module, custom_losses, torch.nn)
-
-    # Create the loss function using the name and parameters
-    return getattr(loss_module, loss_name)(**loss_params)
+    return get_function(loss_name, loss_params, additional_module, custom_losses, torch.nn)
 
 def get_single_callback(callback_name, callback_params, additional_module=None):
-    # Check if the callback_name exists in pl.callbacks or custom_callbackes
-    callback_module = get_correct_package(callback_name, additional_module, custom_callbacks, pl.callbacks)
+    return get_function(callback_name, callback_params, additional_module, custom_callbacks, pl.callbacks, ray_lightning)
+
+def get_function(function_name, function_params, *modules):
+    # Check if the function_name exists in additional_module or torch/torchmetrics
+    function_module = get_correct_package(function_name, *modules)
     
-    # Create the callback function using the name and parameters
-    return getattr(callback_module, callback_name)(**callback_params)
+    # Return the function using the name and parameters
+    return getattr(function_module, function_name)(**function_params)
 
+def prepare_metrics(metrics_info, additional_module=None, split_keys={"train":1,"val":2,"test":3}, seed=42):
+    # TODO: repeat metric if same dataloader is used for multiple splits?
 
-def prepare_metrics(metrics_info, additional_module=None, split_keys={"train":1,"val":2,"test":1}, seed=42):
     # Initialize an empty dictionary to store metrics
     metrics = {}
     if isinstance(metrics_info, dict) and all([key in metrics_info for key in split_keys.keys()]):
@@ -236,11 +284,9 @@ def prepare_metrics(metrics_info, additional_module=None, split_keys={"train":1,
                 else: 
                     raise NotImplementedError  # Raise an error for unsupported input types
                 
-                metrics_package = get_correct_package(metric_name, additional_module, custom_metrics, torchmetrics)
-
                 pl.seed_everything(seed) # Seed the random number generator
                 # Create a metric object using getattr and store it in the metrics dictionary
-                metrics[split_name][-1][metric_name] = getattr(metrics_package, metric_name)(**metric_vals)
+                metrics[split_name][-1][metric_name] = get_function(metric_name, metric_vals, additional_module, custom_metrics, torchmetrics)
             metrics[split_name][-1] = torch.nn.ModuleDict(metrics[split_name][-1])
         metrics[split_name] = torch.nn.ModuleList(metrics[split_name])
     
@@ -371,13 +417,60 @@ def prepare_metrics(metrics_info):
 
 #         cfg["neurons_per_layer"] = neurons_per_layer
 
-def get_correct_package(name, additional_module, custom_package, torch_package):
-    # Check if name exists in additional_module, custom or torch/torchmetrics
-    if hasattr(additional_module, name):
-        return additional_module
-    elif hasattr(custom_package, name):
-        return custom_package
-    elif hasattr(torch_package, name):
-        return torch_package
-    else:
-        raise NotImplementedError(f"The function/class {name} is not found in {additional_module} or {custom_package} or {torch_package}")
+def get_correct_package(name, *modules, raise_error=True):
+    # Check if name exists in any module, in order
+    for module in modules:
+        if hasattr(module, name):
+            return module
+    if raise_error:
+        raise NotImplementedError(f"The function/class {name} is not found in [{', '.join([module.__name__ for module in modules])}]")
+    else: #raise only a warning
+        print(f"Warning: The function/class {name} is not found in [{', '.join([module.__name__ for module in modules])}]")
+
+def complete_prepare_trainer(cfg, experiment_id, model_params=None, additional_module={}, raytune=False):
+    if model_params is None:
+        model_params = deepcopy(cfg["model"])
+
+    trainer_params = prepare_experiment_id(model_params["trainer_params"], experiment_id)
+
+    # Prepare callbacks and logger using the prepared trainer_params
+    trainer_params["callbacks"] = prepare_callbacks(trainer_params, getattr(additional_module,"callbacks",None))
+    trainer_params["logger"] = prepare_logger(trainer_params, getattr(additional_module,"loggers",None))
+    trainer_params["strategy"] = prepare_strategy(trainer_params, getattr(additional_module,"strategies",None))
+    trainer_params["plugins"] = prepare_plugins(trainer_params, getattr(additional_module,"plugins",None))
+
+    # Prepare the trainer using the prepared trainer_params
+    trainer = prepare_trainer(**trainer_params, raytune=raytune)
+
+    return trainer
+
+def complete_prepare_model(cfg, main_module, model_params=None, additional_module={}):
+    model_params = deepcopy(cfg["model"])
+
+    model_params["loss"] = prepare_loss(model_params["loss"], getattr(additional_module,"losses",None))
+
+    # Prepare the optimizer using configuration from cfg
+    model_params["optimizer"] = prepare_optimizer(**model_params["optimizer"])
+
+    # Prepare the metrics using configuration from cfg
+    model_params["metrics"] = prepare_metrics(model_params["metrics"], getattr(additional_module,"metrics",None))
+
+    # Create the model using main_module, loss, and optimizer
+    model = process.create_model(main_module, **model_params)
+
+    return model
+
+
+
+
+# Deprecated
+def prepare_profiler(trainer_params, additional_module=None, seed=42):
+    pl.seed_everything(seed) # Seed the random number generator
+
+    # Check if "profiler" is in trainer_params
+    if "profiler" in trainer_params:
+        if isinstance(trainer_params["profiler"], dict):
+            # Create profiler instances based on profiler names and parameters
+            profiler = get_single_callback(trainer_params["profiler"]["name"], trainer_params["profiler"]["params"], additional_module)
+        trainer_params["profiler"] = profiler
+    return trainer_params

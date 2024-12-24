@@ -153,8 +153,8 @@ class BaseNN(pl.LightningModule):
     # TODO: why dataloader_idx=0?
     def test_step(self, batch, batch_idx, dataloader_idx=0): return self.step(batch, batch_idx, dataloader_idx, "test")
     
-    # TODO: Predict step
-    # def predict_step(self, batch, batch_idx, dataloader_idx): return self.step(batch, batch_idx, dataloader_idx, "predict")
+    # Predict step
+    def predict_step(self, batch, batch_idx, dataloader_idx=0): return self.step(batch, batch_idx, dataloader_idx, "predict")
 
     def on_train_epoch_end(self) -> None:
         self.on_epoch_end("train")

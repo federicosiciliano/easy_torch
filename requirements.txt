@@ -11,6 +11,9 @@ torchmetrics
 # PyTorch Lightning: A lightweight PyTorch wrapper for organizing and simplifying deep learning code
 pytorch_lightning
 
+# Ray Tune: A scalable hyperparameter tuning library
+ray[tune]
+
 # Codecarbon
 codecarbon
 
