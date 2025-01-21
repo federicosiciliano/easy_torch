@@ -3,22 +3,8 @@
 # List of required Python packages for your project
 # Each package should be listed on a separate line
 
-# PyTorch: A popular deep learning library
-torch
-torchvision
-torchmetrics
-
 # PyTorch Lightning: A lightweight PyTorch wrapper for organizing and simplifying deep learning code
 pytorch_lightning
 
-# Ray Tune: A scalable hyperparameter tuning library
-ray[tune]
-
 # Codecarbon
 codecarbon
-
-# Deepspeed (Flops calculation)
-deepspeed
-
-#Wandb
-wandb

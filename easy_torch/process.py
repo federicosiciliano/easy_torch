@@ -21,13 +21,13 @@ def create_model(main_module, seed=42, **kwargs):
     Returns:
     - model: The PyTorch Lightning model.
     """
-    pl.seed_everything(seed) # Set a random seed for weight initialization
+    pl.seed_everything(seed) # Set a random seed for weight initialization --> not needed?
     # Create the model using the BaseNN class
     model = BaseNN(main_module, **kwargs)
     return model
 
 # Function to train a PyTorch Lightning model
-def train_model(trainer, model, loaders, train_key="train", val_key="val", seed=42, tracker=None):
+def train_model(trainer, model, loaders, train_key="train", val_key="val", seed=42, tracker=None, profiler=None):
     """
     Train a PyTorch Lightning model.
 
@@ -55,15 +55,15 @@ def train_model(trainer, model, loaders, train_key="train", val_key="val", seed=
         val_dataloaders = None
     
     if tracker is not None: tracker.start()
+    if profiler is not None: profiler.start_profile()
     
     trainer.fit(model, loaders[train_key], val_dataloaders)
     
     if tracker is not None:
         tracker.stop()
-        # Log tracked emissions
-        # for key,value in tracker.final_emissions_data.values.items():
-        #     if not isinstance(value,str) and value is not None:
-        #         model.custom_log("train_"+key,value)
+    if profiler is not None:
+        profiler.print_model_profile(output_file = f"{profiler.output_dir}/train_flops.txt")
+        profiler.stop_profile()
 
 # Function to validate a PyTorch Lightning model
 def validate_model(trainer, model, loaders, loaders_key="val", seed=42):
@@ -79,13 +79,13 @@ def validate_model(trainer, model, loaders, loaders_key="val", seed=42):
     Returns:
     - None
     """
-    pl.seed_everything(seed, workers=True) #TODO: commentare un po' in giro
+    pl.seed_everything(seed, workers=True)
 
     # Validate the model using the trainer
     trainer.validate(model, loaders[loaders_key])
 
 # Function to test a PyTorch Lightning model
-def test_model(trainer, model, loaders, loaders_key="test", tracker=None, seed=42):
+def test_model(trainer, model, loaders, test_key="test", tracker=None, profiler=None, seed=42):
     """
     Test a PyTorch Lightning model.
 
@@ -93,24 +93,37 @@ def test_model(trainer, model, loaders, loaders_key="test", tracker=None, seed=4
     - trainer: The PyTorch Lightning trainer.
     - model: The PyTorch Lightning model to be tested.
     - loaders: Dictionary of data loaders.
-    - loaders_key: Key for the test data loader.
+    - test_key: Key for the test data loader.
 
     Returns:
     - None
     """
-    pl.seed_everything(seed, workers=True) #TODO: commentare un po' in giro
+    pl.seed_everything(seed, workers=True)
 
     if tracker is not None: tracker.start()
+    if profiler is not None: profiler.start_profile()
     
+    if isinstance(test_key, str):
+        test_dataloaders = loaders[test_key]
+    elif isinstance(test_key, list):
+        test_dataloaders = {key: loaders[key] for key in test_key}
+    else:
+        raise NotImplementedError
+
     # Test the model using the trainer
-    trainer.test(model, loaders[loaders_key])
+    trainer.test(model, test_dataloaders)
     
     if tracker is not None:
         tracker.stop()
-        # Log tracked emissions
-        # for key,value in tracker.final_emissions_data.values.items():
-        #     if not isinstance(value,str) and value is not None:
-        #         model.custom_log("test_"+key,value)
+    if profiler is not None:
+        profiler.print_model_profile(output_file = f"{profiler.output_dir}/test_flops.txt")
+        profiler.stop_profile()
+
+    # # (1) load the best checkpoint automatically (lightning tracks this for you during .fit())
+    # trainer.test(ckpt_path="best")
+
+    # # (2) load the last available checkpoint (only works if `ModelCheckpoint(save_last=True)`)
+    # trainer.test(ckpt_path="last")
 
 # Function to shutdown data loader workers in a distributed setting
 def shutdown_dataloaders_workers():
@@ -125,7 +138,6 @@ def shutdown_dataloaders_workers():
     """
     # Check if PyTorch is distributed initialized
     if torch.distributed.is_initialized():
-        print("\n\nTORCH DISTR INIT\n\n")
         torch.distributed.barrier()
         torch.distributed.destroy_process_group()
 
